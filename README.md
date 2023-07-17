@@ -12,8 +12,8 @@ collection, and many other functionality that can be shared across RPCs.
 ## Try it
 
 ```
-go run server/main.go
+go run bw-server1/main.go
 ```
 
 ```
-go run client/main.go
+go run bw-client/main.go
