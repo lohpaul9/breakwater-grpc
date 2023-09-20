@@ -11,18 +11,6 @@ const RTT_MICROSECOND = 5000                // RTT in microseconds
 const DELAY_THRESHOLD_PERCENT float64 = 0.4 // target is 0.4 of SLA as per Breakwater
 const MAX_Q_LENGTH = 50                     // max length of queue
 
-/**
-TODO:
-0. Update greatestDelay in main loop
-0. Find a way to update RTT (how often is a RTT)?
-1. Make breakwater thread safe
-2. Find efficient way for polling map of longest request times
-3. What to do for clients when not enough credits? Use a channel for credits
-- A channel for requests (once done, remove one from channel)
-- For sleeping requests in 'queue', get waken up whenever there is a change in credits (via a channel)
-- Store the number of credits in the channel, and decrement increment whenever done
-*/
-
 /*
 DATA STRUCTURES:
 1. A global map of all active connections, which stores cIssued, cOC and cDemand
@@ -59,7 +47,7 @@ type Breakwater struct {
 	outgoingCredits   chan int64 // outgoing credits
 }
 
-// Todo: Add fields for gRPC contexts
+// TODO: Add fields for gRPC contexts
 type request struct {
 	reqID                  uuid.UUID
 	timeDeductionsMicrosec int64

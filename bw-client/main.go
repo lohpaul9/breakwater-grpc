@@ -79,7 +79,7 @@ func callUnaryEcho(client ecpb.EchoClient, message string) {
 	if err != nil {
 		log.Fatalf("client.UnaryEcho(_) = _, %v: ", err)
 	}
-	fmt.Println("UnaryEcho: ", resp.Message)
+	logger("UnaryEcho: ", resp.Message)
 }
 
 func callBidiStreamingEcho(client ecpb.EchoClient) {
@@ -103,7 +103,7 @@ func callBidiStreamingEcho(client ecpb.EchoClient) {
 		if err != nil {
 			log.Fatalf("failed to receive response due to error: %v", err)
 		}
-		fmt.Println("BidiStreaming Echo: ", resp.Message)
+		logger("BidiStreaming Echo: ", resp.Message)
 	}
 }
 
