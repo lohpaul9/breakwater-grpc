@@ -54,9 +54,9 @@ func callUnaryEcho(ctx context.Context, client ecpb.EchoClient, message string) 
 	resp, err := client.UnaryEcho(ctx, &ecpb.EchoRequest{Message: message})
 	// The function UnaryEcho above is the RPC stub provided by downstream nodes (server/main.go) to this service to call.
 	if err != nil {
-		fmt.Printf("client.UnaryEcho(_) = _, %v: ", err)
+		logger("client.UnaryEcho(_) = _, %v: ", err)
 	} else {
-		fmt.Println("UnaryEcho: ", resp.Message)
+		logger("UnaryEcho: ", resp.Message)
 	}
 }
 
@@ -79,31 +79,9 @@ type server struct {
 	rgc ecpb.EchoClient
 }
 
-// func newServer(priceTable *PriceTable) *server {
-// 	// This function creates a new server with a given pricetable, which is used later for the client interceptor
-// 	creds_client, err_client := credentials.NewClientTLSFromFile(data.Path("x509/ca_cert.pem"), "x.test.example.com")
-// 	if err_client != nil {
-// 		fmt.Printf("failed to load credentials: %v", err_client)
-// 	}
-
-// 	// Set up a connection to the downstream server.
-// 	conn, err := grpc.Dial(*addr, grpc.WithTransportCredentials(creds_client),
-// 		grpc.WithUnaryInterceptor(priceTable.unaryInterceptor_client))
-// 	if err != nil {
-// 		fmt.Printf("did not connect: %v", err)
-// 	}
-// 	// defer conn.Close()
-
-// 	// Make a echo client and send RPCs.
-// 	// rgc := ecpb.NewEchoClient(conn)
-
-// 	s := &server{rgc: ecpb.NewEchoClient(conn)}
-// 	return s
-// }
-
 func (s *server) UnaryEcho(ctx context.Context, in *pb.EchoRequest) (*pb.EchoResponse, error) {
 	// This function is the server-side stub provided by this service to upstream nodes/clients.
-	fmt.Printf("unary echoing message at server 2 %q\n", in.Message)
+	logger("unary echoing message at server 2 %q\n", in.Message)
 	// [critical] to pass ctx from upstream to downstream
 	// This function is called when the middle tier service behave as a client and dials the downstream nodes.
 	callUnaryEcho(ctx, s.rgc, in.Message)
@@ -117,10 +95,10 @@ func (s *server) BidirectionalStreamingEcho(stream pb.Echo_BidirectionalStreamin
 			if err == io.EOF {
 				return nil
 			}
-			fmt.Printf("server: error receiving from stream: %v\n", err)
+			logger("server: error receiving from stream: %v\n", err)
 			return err
 		}
-		fmt.Printf("bidi echoing message %q\n", in.Message)
+		logger("bidi echoing message %q\n", in.Message)
 		stream.Send(&pb.EchoResponse{Message: in.Message})
 	}
 }
@@ -168,13 +146,13 @@ func RunBreakwater() {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
-		fmt.Printf("failed to listen: %v", err)
+		logger("failed to listen: %v", err)
 	}
 
 	// Create tls based credential.
 	creds, err := credentials.NewServerTLSFromFile(data.Path("x509/server_cert.pem"), data.Path("x509/server_key.pem"))
 	if err != nil {
-		fmt.Printf("failed to create credentials: %v", err)
+		logger("failed to create credentials: %v", err)
 	}
 
 	breakwater := bw.InitBreakwater(bw.BWParametersDefault)
@@ -183,14 +161,14 @@ func RunBreakwater() {
 
 	creds_client, err_client := credentials.NewClientTLSFromFile(data.Path("x509/ca_cert.pem"), "x.test.example.com")
 	if err_client != nil {
-		fmt.Printf("failed to load credentials: %v", err_client)
+		logger("failed to load credentials: %v", err_client)
 	}
 
 	// Set up a connection to the downstream server, but with the client-side interceptor on top of breakWater.
 	conn, err := grpc.Dial(*addr, grpc.WithTransportCredentials(creds_client),
 		grpc.WithUnaryInterceptor(breakwater.UnaryInterceptorClient))
 	if err != nil {
-		fmt.Printf("did not connect: %v", err)
+		logger("did not connect: %v", err)
 	}
 
 	// Make a echo client rgc and send RPCs.
@@ -198,6 +176,6 @@ func RunBreakwater() {
 	pb.RegisterEchoServer(s, &server{rgc: ecpb.NewEchoClient(conn)})
 
 	if err := s.Serve(lis); err != nil {
-		fmt.Printf("failed to serve: %v", err)
+		logger("failed to serve: %v", err)
 	}
 }

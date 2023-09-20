@@ -118,7 +118,7 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 			// Else, return to binary semaphore and keep looping
 			// Set a minimum credit balance of 0
 			b.outgoingCredits <- 0
-			// TODO: Add a timeout here?
+			// TODO: Consider adding a timeout here
 		}
 
 		// noCreditBlocker will unblock again when another request returns with
@@ -139,7 +139,6 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 	err := invoker(ctx, method, req, reply, cc, grpc.Header(&header))
 	if err != nil {
 		// The request failed. This error should be logged and examined.
-		// log.Println(err)
 		return err
 	}
 

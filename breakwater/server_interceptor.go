@@ -2,7 +2,6 @@ package breakwater
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"strconv"
 	"time"
@@ -43,7 +42,6 @@ func (b *Breakwater) RegisterClient(id uuid.UUID, demand int64) (Connection, boo
 
 /*
 Helper to get current time delay
-TODO: Test time delay in microseconds
 */
 func (b *Breakwater) getDelay() float64 {
 	currGreatestDelay, prevGreatestDelay := <-b.currGreatestDelay, <-b.prevGreatestDelay
@@ -253,7 +251,6 @@ func (b *Breakwater) updateCreditsToIssue(clientID uuid.UUID, demand int64) (cNe
 		logger("WARNING: cIssued < 0")
 	}
 
-	// fmt.Println("new total issued credits: ", b.cIssued)
 	c.issuedWriteLock <- 1
 	c.lastUpdated <- time.Now()
 	return
@@ -381,14 +378,12 @@ func (b *Breakwater) DummyUnaryInterceptor(ctx context.Context, req interface{},
 
 func (b *Breakwater) PrintOutgoingCredits() {
 	o := <-b.outgoingCredits
-	fmt.Println("Outgoing credits: ", o)
+	logger("Outgoing credits: ", o)
 	b.outgoingCredits <- o
 }
 
 /*
-TODO List (harder problems):
-1. How to get ID of endusers / clients (similar hard-coded message) (DONE)
-2. How to check metrics against SLAs (prometheus, and chaining unary incerceptors) (DONE)
-3. AQM - code written (DONE)
-4. How to check queue of requests client side (may have to use metrics)
+TODO List of harder problems:
+1. Deterministically de-queue client side
+2. Measure queuing delay more precisely instead of using processing time
 */

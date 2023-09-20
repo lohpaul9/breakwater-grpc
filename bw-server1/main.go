@@ -53,7 +53,7 @@ type server struct {
 }
 
 func (s *server) UnaryEcho(ctx context.Context, in *pb.EchoRequest) (*pb.EchoResponse, error) {
-	fmt.Printf("unary echoing message %q\n", in.Message)
+	logger("unary echoing message %q\n", in.Message)
 	return &pb.EchoResponse{Message: "Response from backend."}, nil
 }
 
@@ -64,10 +64,10 @@ func (s *server) BidirectionalStreamingEcho(stream pb.Echo_BidirectionalStreamin
 			if err == io.EOF {
 				return nil
 			}
-			fmt.Printf("server: error receiving from stream: %v\n", err)
+			logger("server: error receiving from stream: %v\n", err)
 			return err
 		}
-		fmt.Printf("bidi echoing message %q\n", in.Message)
+		logger("bidi echoing message %q\n", in.Message)
 		stream.Send(&pb.EchoResponse{Message: in.Message})
 	}
 }
@@ -115,13 +115,13 @@ func RunBreakwater() {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
-		fmt.Printf("failed to listen: %v", err)
+		logger("failed to listen: %v", err)
 	}
 
 	// Create tls based credential.
 	creds, err := credentials.NewServerTLSFromFile(data.Path("x509/server_cert.pem"), data.Path("x509/server_key.pem"))
 	if err != nil {
-		fmt.Printf("failed to create credentials: %v", err)
+		logger("failed to create credentials: %v", err)
 	}
 
 	breakwater := bw.InitBreakwater(bw.BWParametersDefault)
@@ -132,6 +132,6 @@ func RunBreakwater() {
 	pb.RegisterEchoServer(s, &server{})
 
 	if err := s.Serve(lis); err != nil {
-		fmt.Printf("failed to serve: %v", err)
+		logger("failed to serve: %v", err)
 	}
 }
