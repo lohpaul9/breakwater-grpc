@@ -2,7 +2,9 @@ package breakwater
 
 import (
 	"context"
+	"fmt"
 	"math"
+	"runtime/metrics"
 	"strconv"
 	"time"
 
@@ -44,10 +46,61 @@ func (b *Breakwater) RegisterClient(id uuid.UUID, demand int64) (Connection, boo
 Helper to get current time delay
 */
 func (b *Breakwater) getDelay() float64 {
-	currGreatestDelay, prevGreatestDelay := <-b.currGreatestDelay, <-b.prevGreatestDelay
-	b.currGreatestDelay <- currGreatestDelay
-	b.prevGreatestDelay <- prevGreatestDelay
-	return math.Max(currGreatestDelay, prevGreatestDelay)
+	// get the current histogram
+	b.currHist = readHistogram()
+
+	if b.prevHist == nil {
+		// If prevHist is nil, there is no previous data to compute latency against
+		b.prevHist = b.currHist
+		return 0.0
+	}
+
+	gapLatency := maximumQueuingDelayus(b.prevHist, b.currHist)
+	// Store the current histogram for future reference
+	b.prevHist = b.currHist
+
+	return gapLatency
+}
+
+// we should be able to avoid the GetHistogramDifference function by using the following function
+// Find the maximum bucket between two Float64Histogram distributions
+func maximumQueuingDelayus(earlier, later *metrics.Float64Histogram) float64 {
+	for i := len(earlier.Counts) - 1; i >= 0; i-- {
+		if later.Counts[i] > earlier.Counts[i] {
+			return later.Buckets[i] * 1000000
+		}
+	}
+	return 0
+}
+
+// this function reads the currHist from metrics
+func readHistogram() *metrics.Float64Histogram {
+	// Create a sample for metric /sched/latencies:seconds and /sync/mutex/wait/total:seconds
+	const queueingDelay = "/sched/latencies:seconds"
+	measureMutexWait := false
+
+	// Create a sample for the metric.
+	sample := make([]metrics.Sample, 1)
+	sample[0].Name = queueingDelay
+	if measureMutexWait {
+		const mutexWait = "/sync/mutex/wait/total:seconds"
+		sample[1].Name = mutexWait
+	}
+
+	// Sample the metric.
+	metrics.Read(sample)
+
+	// Check if the metric is actually supported.
+	// If it's not, the resulting value will always have
+	// kind KindBad.
+	if sample[0].Value.Kind() == metrics.KindBad {
+		panic(fmt.Sprintf("metric %q no longer supported", queueingDelay))
+	}
+
+	// get the current histogram
+	currHist := sample[0].Value.Float64Histogram()
+
+	return currHist
 }
 
 // Helper to calculate A additive Factor
@@ -125,10 +178,10 @@ func (b *Breakwater) rttUpdate() {
 			b.cIssued <- totalIssued
 			b.cTotal = b.getUpdatedTotalCredits()
 
-			// Reset greatest delay
-			<-b.prevGreatestDelay
-			b.prevGreatestDelay <- <-b.currGreatestDelay
-			b.currGreatestDelay <- 0
+			// // Reset greatest delay
+			// <-b.prevGreatestDelay
+			// b.prevGreatestDelay <- <-b.currGreatestDelay
+			// b.currGreatestDelay <- 0
 
 			logger("[Updating credits]: prev cTotal: %d, new cTotal: %d, cIssued: %d", prevCTotal, b.cTotal, totalIssued)
 			b.rttLock <- 1
@@ -312,8 +365,8 @@ func (b *Breakwater) UnaryInterceptor(ctx context.Context, req interface{}, info
 	logger("[Req handled]: Time delay was %f after deduction of %d", delayMicroSeconds, timeDeductions)
 
 	// Update delay as neccessary
-	currGreatestDelay := <-b.currGreatestDelay
-	b.currGreatestDelay <- math.Max(currGreatestDelay, delayMicroSeconds)
+	// currGreatestDelay := <-b.currGreatestDelay
+	// b.currGreatestDelay <- math.Max(currGreatestDelay, delayMicroSeconds)
 
 	// Does update once every rtt in separate goroutine
 	go b.rttUpdate()

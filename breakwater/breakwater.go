@@ -1,6 +1,7 @@
 package breakwater
 
 import (
+	"runtime/metrics"
 	"sync"
 	"time"
 
@@ -28,23 +29,25 @@ type Connection struct {
 }
 
 type Breakwater struct {
-	clientMap         sync.Map  // Map of client connections
-	requestMap        sync.Map  // Map of requests for time tracking
-	lastUpdateTime    time.Time // last time since an RTT update
-	numClients        chan int64
-	rttLock           chan int64   // Lock for cTotal, cIssued, lastUpdateTime update
-	cTotal            int64        // global pool of credits
-	cIssued           chan int64   // total credits currently issued
-	aFactor           float64      // aggressive factor for increasing credits
-	bFactor           float64      // multiplicative factor for decreasing credits
-	SLO               int64        // SLA in microseconds
-	thresholdDelay    float64      // threshold delay in microseconds
-	currGreatestDelay chan float64 // current greatest delay in microseconds
-	prevGreatestDelay chan float64 // previous greatest delay in microseconds
-	id                uuid.UUID
-	pendingOutgoing   chan int64 // pending outgoing requests
-	noCreditBlocker   chan int64 // block requests when no credits
-	outgoingCredits   chan int64 // outgoing credits
+	clientMap      sync.Map  // Map of client connections
+	requestMap     sync.Map  // Map of requests for time tracking
+	lastUpdateTime time.Time // last time since an RTT update
+	numClients     chan int64
+	rttLock        chan int64 // Lock for cTotal, cIssued, lastUpdateTime update
+	cTotal         int64      // global pool of credits
+	cIssued        chan int64 // total credits currently issued
+	aFactor        float64    // aggressive factor for increasing credits
+	bFactor        float64    // multiplicative factor for decreasing credits
+	SLO            int64      // SLA in microseconds
+	thresholdDelay float64    // threshold delay in microseconds
+	// currGreatestDelay chan float64 // current greatest delay in microseconds
+	// prevGreatestDelay chan float64 // previous greatest delay in microseconds
+	prevHist        *metrics.Float64Histogram
+	currHist        *metrics.Float64Histogram
+	id              uuid.UUID
+	pendingOutgoing chan int64 // pending outgoing requests
+	noCreditBlocker chan int64 // block requests when no credits
+	outgoingCredits chan int64 // outgoing credits
 }
 
 // TODO: Add fields for gRPC contexts
