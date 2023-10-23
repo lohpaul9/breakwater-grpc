@@ -11,6 +11,7 @@ import (
 const RTT_MICROSECOND = 5000                // RTT in microseconds
 const DELAY_THRESHOLD_PERCENT float64 = 0.4 // target is 0.4 of SLA as per Breakwater
 const MAX_Q_LENGTH = 50                     // max length of queue
+var debug bool = false
 
 /*
 DATA STRUCTURES:
@@ -75,6 +76,7 @@ func InitBreakwater(param BWParameters) (bw *Breakwater) {
 		noCreditBlocker: make(chan int64, 1),
 		outgoingCredits: make(chan int64, 1),
 	}
+	debug = param.verbose
 	// unblock blocker
 	bw.noCreditBlocker <- 1
 	// give 1 credit to start

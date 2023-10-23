@@ -14,7 +14,9 @@ var (
 
 // logger is to mock a sophisticated logging system. To simplify the example, we just print out the content.
 func logger(format string, a ...interface{}) {
-	fmt.Printf("LOG:\t"+format+"\n", a...)
+	if debug {
+		fmt.Printf("LOG:\t"+format+"\n", a...)
+	}
 }
 
 func min(a, b int64) int64 {
@@ -40,6 +42,7 @@ type BWParameters struct {
 	aFactor      float64
 	SLO          int64
 	startCredits int64
+	verbose      bool
 }
 
 /*
@@ -54,4 +57,5 @@ var BWParametersDefault BWParameters = BWParameters{
 	aFactor:      0.001,
 	SLO:          160,
 	startCredits: 100,
+	verbose:      false,
 }
