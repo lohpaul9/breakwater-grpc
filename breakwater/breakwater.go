@@ -29,19 +29,17 @@ type Connection struct {
 }
 
 type Breakwater struct {
-	clientMap      sync.Map  // Map of client connections
-	requestMap     sync.Map  // Map of requests for time tracking
-	lastUpdateTime time.Time // last time since an RTT update
-	numClients     chan int64
-	rttLock        chan int64 // Lock for cTotal, cIssued, lastUpdateTime update
-	cTotal         int64      // global pool of credits
-	cIssued        chan int64 // total credits currently issued
-	aFactor        float64    // aggressive factor for increasing credits
-	bFactor        float64    // multiplicative factor for decreasing credits
-	SLO            int64      // SLA in microseconds
-	thresholdDelay float64    // threshold delay in microseconds
-	// currGreatestDelay chan float64 // current greatest delay in microseconds
-	// prevGreatestDelay chan float64 // previous greatest delay in microseconds
+	clientMap       sync.Map  // Map of client connections
+	requestMap      sync.Map  // Map of requests for time tracking
+	lastUpdateTime  time.Time // last time since an RTT update
+	numClients      chan int64
+	rttLock         chan int64 // Lock for cTotal, cIssued, lastUpdateTime update
+	cTotal          int64      // global pool of credits
+	cIssued         chan int64 // total credits currently issued
+	aFactor         float64    // aggressive factor for increasing credits
+	bFactor         float64    // multiplicative factor for decreasing credits
+	SLO             int64      // SLA in microseconds
+	thresholdDelay  float64    // threshold delay in microseconds
 	prevHist        *metrics.Float64Histogram
 	currHist        *metrics.Float64Histogram
 	id              uuid.UUID
@@ -59,19 +57,19 @@ type request struct {
 func InitBreakwater(param BWParameters) (bw *Breakwater) {
 	bFactor, aFactor, SLO, startCredits := param.bFactor, param.aFactor, param.SLO, param.startCredits
 	bw = &Breakwater{
-		clientMap:         sync.Map{},
-		lastUpdateTime:    time.Now(),
-		numClients:        make(chan int64, 1),
-		rttLock:           make(chan int64, 1),
-		cTotal:            startCredits,
-		cIssued:           make(chan int64, 1),
-		bFactor:           bFactor,
-		aFactor:           aFactor,
-		SLO:               SLO,
-		thresholdDelay:    float64(SLO) * DELAY_THRESHOLD_PERCENT,
-		currGreatestDelay: make(chan float64, 1),
-		prevGreatestDelay: make(chan float64, 1),
-		id:                uuid.New(),
+		clientMap:      sync.Map{},
+		lastUpdateTime: time.Now(),
+		numClients:     make(chan int64, 1),
+		rttLock:        make(chan int64, 1),
+		cTotal:         startCredits,
+		cIssued:        make(chan int64, 1),
+		bFactor:        bFactor,
+		aFactor:        aFactor,
+		SLO:            SLO,
+		thresholdDelay: float64(SLO) * DELAY_THRESHOLD_PERCENT,
+		prevHist:       nil,
+		currHist:       nil,
+		id:             uuid.New(),
 		// Outgoing buffer drops requests if > 50 requests in queue
 		pendingOutgoing: make(chan int64, MAX_Q_LENGTH),
 		noCreditBlocker: make(chan int64, 1),
@@ -85,8 +83,8 @@ func InitBreakwater(param BWParameters) (bw *Breakwater) {
 	bw.rttLock <- 1
 	// zero credits and delay
 	bw.numClients <- 0
-	bw.currGreatestDelay <- 0
-	bw.prevGreatestDelay <- 0
+	// bw.currGreatestDelay <- 0
+	// bw.prevGreatestDelay <- 0
 	bw.cIssued <- 0
 	return
 }
