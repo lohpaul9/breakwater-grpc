@@ -3,7 +3,6 @@ package breakwater
 import (
 	"context"
 	"strconv"
-	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -62,22 +61,22 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 	logger("[Before Req]:	The method name for price table is %s\n", method)
 
 	// retrieve price table for downstream clients queueing delay
-	var isDownstream bool = false
+	// var isDownstream bool = false
 	var reqid uuid.UUID
-	timeStart := time.Now()
-	var reqTimeData request
+	// timeStart := time.Now()
+	// var reqTimeData request
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok && len(md["reqid"]) > 0 {
 		logger("[Before queue]:	is downstream request\n")
-		reqid, _ := uuid.Parse(md["reqid"][0])
-		r, ok := b.requestMap.Load(reqid)
-		isDownstream = true
-		if ok {
-			// should always be okay (the reqId should already be stored)
-			reqTimeData = r.(request)
-		} else {
-			b.requestMap.Store(reqid, request{reqid, 0})
-		}
+		// reqid, _ := uuid.Parse(md["reqid"][0])
+		// r, ok := b.requestMap.Load(reqid)
+		// isDownstream = true
+		// if ok {
+		// 	// should always be okay (the reqId should already be stored)
+		// 	reqTimeData = r.(request)
+		// } else {
+		// 	b.requestMap.Store(reqid, request{reqid, 0})
+		// }
 	} else {
 		// This is first upstream client / end user
 		reqid = uuid.New()
@@ -158,14 +157,14 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 		b.unblockNoCreditBlock()
 	}
 
-	// Update time deductions
-	timeEnd := time.Now()
-	timeElapsed := timeEnd.Sub(timeStart).Microseconds()
-	if isDownstream {
-		reqTimeData.timeDeductionsMicrosec += timeElapsed
-		b.requestMap.Store(reqTimeData.reqID, reqTimeData)
-		logger("[Received Resp]:	Downstream client - total time deduction %d\n", reqTimeData.timeDeductionsMicrosec)
-	}
+	// // Update time deductions
+	// timeEnd := time.Now()
+	// timeElapsed := timeEnd.Sub(timeStart).Microseconds()
+	// if isDownstream {
+	// 	reqTimeData.timeDeductionsMicrosec += timeElapsed
+	// 	// b.requestMap.Store(reqTimeData.reqID, reqTimeData)
+	// 	logger("[Received Resp]:	Downstream client - total time deduction %d\n", reqTimeData.timeDeductionsMicrosec)
+	// }
 
 	return err
 }

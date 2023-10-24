@@ -30,8 +30,8 @@ type Connection struct {
 }
 
 type Breakwater struct {
-	clientMap       sync.Map  // Map of client connections
-	requestMap      sync.Map  // Map of requests for time tracking
+	clientMap sync.Map // Map of client connections
+	// requestMap      sync.Map  // Map of requests for time tracking
 	lastUpdateTime  time.Time // last time since an RTT update
 	numClients      chan int64
 	rttLock         chan int64 // Lock for cTotal, cIssued, lastUpdateTime update
@@ -49,11 +49,11 @@ type Breakwater struct {
 	outgoingCredits chan int64 // outgoing credits
 }
 
-// TODO: Add fields for gRPC contexts
-type request struct {
-	reqID                  uuid.UUID
-	timeDeductionsMicrosec int64
-}
+// // TODO: Add fields for gRPC contexts
+// type request struct {
+// 	reqID                  uuid.UUID
+// 	timeDeductionsMicrosec int64
+// }
 
 func InitBreakwater(param BWParameters) (bw *Breakwater) {
 	bFactor, aFactor, SLO, startCredits := param.bFactor, param.aFactor, param.SLO, param.startCredits

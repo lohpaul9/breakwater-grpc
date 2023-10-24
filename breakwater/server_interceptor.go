@@ -274,7 +274,7 @@ func (b *Breakwater) updateCreditsToIssue(clientID uuid.UUID, demand int64) (cNe
 	// Lock the connections issued credits
 	<-c.issuedWriteLock
 
-	connection, ok = b.clientMap.Load(clientID)
+	connection, _ = b.clientMap.Load(clientID)
 	c = connection.(Connection)
 
 	connTimeOfLastUpdate := <-c.lastUpdated
@@ -346,23 +346,23 @@ func (b *Breakwater) UnaryInterceptor(ctx context.Context, req interface{}, info
 	grpc.SendHeader(ctx, header)
 
 	// Start the timer
-	b.requestMap.Store(reqId, request{reqID: reqId, timeDeductionsMicrosec: 0})
-	time_start := time.Now()
+	// b.requestMap.Store(reqId, request{reqID: reqId, timeDeductionsMicrosec: 0})
+	// time_start := time.Now()
 
 	// Call the handler
 	logger("[Handling Req]:	Handling req")
 	m, err := handler(ctx, req)
 
 	// End the timer
-	time_end := time.Now()
-	elapsed := time_end.Sub(time_start).Microseconds()
-	reqTimer, _ := b.requestMap.Load(reqId)
-	timeDeductions := reqTimer.(request).timeDeductionsMicrosec
-	b.requestMap.Delete(reqId)
+	// time_end := time.Now()
+	// elapsed := time_end.Sub(time_start).Microseconds()
+	// reqTimer, _ := b.requestMap.Load(reqId)
+	// timeDeductions := reqTimer.(request).timeDeductionsMicrosec
+	// b.requestMap.Delete(reqId)
 	// Account for deductions of outgoing calls
-	delayMicroSeconds := float64(elapsed - timeDeductions)
+	// delayMicroSeconds := float64(elapsed - timeDeductions)
 
-	logger("[Req handled]: Time delay was %f after deduction of %d", delayMicroSeconds, timeDeductions)
+	// logger("[Req handled]: Time delay was %f after deduction of %d", delayMicroSeconds, timeDeductions)
 
 	// Update delay as neccessary
 	// currGreatestDelay := <-b.currGreatestDelay
