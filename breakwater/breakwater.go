@@ -76,7 +76,7 @@ func InitBreakwater(param BWParameters) (bw *Breakwater) {
 		noCreditBlocker: make(chan int64, 1),
 		outgoingCredits: make(chan int64, 1),
 	}
-	debug = param.verbose
+	debug = param.Verbose
 	// unblock blocker
 	bw.noCreditBlocker <- 1
 	// give 1 credit to start

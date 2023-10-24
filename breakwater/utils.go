@@ -42,7 +42,7 @@ type BWParameters struct {
 	aFactor      float64
 	SLO          int64
 	startCredits int64
-	verbose      bool
+	Verbose      bool
 }
 
 /*
@@ -57,5 +57,5 @@ var BWParametersDefault BWParameters = BWParameters{
 	aFactor:      0.001,
 	SLO:          160,
 	startCredits: 100,
-	verbose:      false,
+	Verbose:      false,
 }
