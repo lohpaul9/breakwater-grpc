@@ -103,8 +103,8 @@ func (b *Breakwater) startTimeoutRoutine(duration time.Duration) {
 		b.unblockNoCreditBlock()
 
 		// Unblock all requests by sending zero-credit signals
-		close(b.noCreditBlocker)
-		close(b.outgoingCredits)
-		close(b.pendingOutgoing)
+		// close(b.noCreditBlocker)
+		// close(b.outgoingCredits)
+		// close(b.pendingOutgoing)
 	}()
 }
