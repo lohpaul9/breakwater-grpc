@@ -85,8 +85,24 @@ func InitBreakwater(param BWParameters) (bw *Breakwater) {
 	bw.rttLock <- 1
 	// zero credits and delay
 	bw.numClients <- 0
-	// bw.currGreatestDelay <- 0
-	// bw.prevGreatestDelay <- 0
 	bw.cIssued <- 0
+
+	bw.startTimeoutRoutine(10 * time.Second)
 	return
+}
+
+func (b *Breakwater) startTimeoutRoutine(duration time.Duration) {
+	// Start a timer for the specified duration
+	timer := time.NewTimer(duration)
+
+	// Start a separate Goroutine to unblock requests after the timer expires
+	go func() {
+		<-timer.C
+		logger("[Timeout]:	Unblocking all requests\n")
+
+		// Unblock all requests by sending zero-credit signals
+		close(b.noCreditBlocker)
+		close(b.outgoingCredits)
+		close(b.pendingOutgoing)
+	}()
 }
