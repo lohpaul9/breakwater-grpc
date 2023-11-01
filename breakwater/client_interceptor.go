@@ -58,7 +58,6 @@ func (b *Breakwater) unblockNoCreditBlock() {
 }
 
 func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-	logger("[Before Req]:	The method name for price table is %s\n", method)
 
 	// retrieve price table for downstream clients queueing delay
 	// var isDownstream bool = false
@@ -119,7 +118,7 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 			b.outgoingCredits <- 0
 			// TODO: Consider adding a timeout here
 		}
-
+		logger("[Before Req]:	The method name for price table is %s\n")
 		// noCreditBlocker will unblock again when another request returns with
 		// more credits
 	}

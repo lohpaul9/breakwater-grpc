@@ -98,11 +98,13 @@ func (b *Breakwater) startTimeoutRoutine(duration time.Duration) {
 	// Start a separate Goroutine to unblock requests after the timer expires
 	go func() {
 		<-timer.C
-		logger("[Timeout]:	Unblocking all requests\n")
-		b.outgoingCredits <- 999999999
+		logger("[Timeout]:	Unblocking all requests. Updated spend credits to %d\n", 99999999)
+		// Update credits and unblock other requests
+		<-b.outgoingCredits
+		b.outgoingCredits <- 99999999
 		b.unblockNoCreditBlock()
+		// close channerls after all requests are unblocked and sent
 
-		// Unblock all requests by sending zero-credit signals
 		// close(b.noCreditBlocker)
 		// close(b.outgoingCredits)
 		// close(b.pendingOutgoing)
