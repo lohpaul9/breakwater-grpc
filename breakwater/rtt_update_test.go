@@ -83,7 +83,7 @@ func TestGetTotalCreditIncrement(t *testing.T) {
 	bw.currGreatestDelay <- 20
 	bw.prevGreatestDelay <- 10
 	totalCredits := bw.getUpdatedTotalCredits()
-	expected := BWParametersDefault.startCredits + max(roundedInt(float64(numClients)*0.001), 1)
+	expected := BWParametersDefault.InitialCredits + max(roundedInt(float64(numClients)*0.001), 1)
 	if totalCredits != expected {
 		t.Errorf("Expected totalCredits to be %d, got %d", expected, totalCredits)
 	}
@@ -98,7 +98,7 @@ func TestGetTotalCreditDecrement(t *testing.T) {
 	bw.prevGreatestDelay <- 30
 	totalCredits := bw.getUpdatedTotalCredits()
 	expectedMultFact := math.Max(1.0-BWParametersDefault.bFactor*((500.0-targetThreshold)/targetThreshold), 0.5)
-	expected := roundedInt(float64(BWParametersDefault.startCredits) * expectedMultFact)
+	expected := roundedInt(float64(BWParametersDefault.InitialCredits) * expectedMultFact)
 	if totalCredits != expected {
 		t.Errorf("Expected totalCredits to be %d, got %d", expected, totalCredits)
 	}
@@ -120,7 +120,7 @@ func TestRTTUpdateIncrement(t *testing.T) {
 	time.Sleep(400 * time.Millisecond)
 	bw.rttUpdate()
 	totalCredits := bw.cTotal
-	expected := BWParametersDefault.startCredits + max(roundedInt(float64(numClients)*0.001), 1)*2
+	expected := BWParametersDefault.InitialCredits + max(roundedInt(float64(numClients)*0.001), 1)*2
 	if totalCredits != expected {
 		t.Errorf("Expected totalCredits to be %d, got %d", expected, totalCredits)
 	}
@@ -149,7 +149,7 @@ func TestRttUpdateDecrement(t *testing.T) {
 
 	// Calculate expected
 	expectedMultFact := math.Max(1.0-BWParametersDefault.bFactor*((500.0-targetThreshold)/targetThreshold), 0.5)
-	expected := roundedInt(float64(BWParametersDefault.startCredits) * expectedMultFact)
+	expected := roundedInt(float64(BWParametersDefault.InitialCredits) * expectedMultFact)
 	expectedMultFact = math.Max(1.0-BWParametersDefault.bFactor*((300.0-targetThreshold)/targetThreshold), 0.5)
 	expected = roundedInt(float64(expected) * expectedMultFact)
 
@@ -164,7 +164,7 @@ func TestRttUpdateNotReached(t *testing.T) {
 	bw.rttUpdate()
 
 	totalCredits := bw.cTotal
-	expected := BWParametersDefault.startCredits
+	expected := BWParametersDefault.InitialCredits
 
 	if totalCredits != expected {
 		t.Errorf("Expected totalCredits to be %d, got %d", expected, totalCredits)
@@ -186,7 +186,7 @@ func TestRTTUpdateOnlyOnceRace(t *testing.T) {
 	bw.rttUpdate()
 	bw.rttUpdate()
 	totalCredits := bw.cTotal
-	expected := BWParametersDefault.startCredits + max(roundedInt(float64(numClients)*0.001), 1)
+	expected := BWParametersDefault.InitialCredits + max(roundedInt(float64(numClients)*0.001), 1)
 	if totalCredits != expected {
 		t.Errorf("Expected totalCredits to be %d, got %d", expected, totalCredits)
 	}

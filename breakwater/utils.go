@@ -38,11 +38,11 @@ func roundedInt(x float64) int64 {
 }
 
 type BWParameters struct {
-	bFactor      float64
-	aFactor      float64
-	SLO          int64
-	startCredits int64
-	Verbose      bool
+	BFactor        float64
+	AFactor        float64
+	SLO            int64
+	InitialCredits int64
+	Verbose        bool
 }
 
 /*
@@ -53,9 +53,9 @@ d_t = 40% of SLA,
 AQM threshold = 2 * d_t
 */
 var BWParametersDefault BWParameters = BWParameters{
-	bFactor:      0.02,
-	aFactor:      0.001,
-	SLO:          160,
-	startCredits: 100,
-	Verbose:      false,
+	BFactor:        0.02,
+	AFactor:        0.001,
+	SLO:            160,
+	InitialCredits: 1000,
+	Verbose:        false,
 }

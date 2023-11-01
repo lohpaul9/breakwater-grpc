@@ -56,13 +56,13 @@ type Breakwater struct {
 // }
 
 func InitBreakwater(param BWParameters) (bw *Breakwater) {
-	bFactor, aFactor, SLO, startCredits := param.bFactor, param.aFactor, param.SLO, param.startCredits
+	bFactor, aFactor, SLO, InitialCredits := param.BFactor, param.AFactor, param.SLO, param.InitialCredits
 	bw = &Breakwater{
 		clientMap:      sync.Map{},
 		lastUpdateTime: time.Now(),
 		numClients:     make(chan int64, 1),
 		rttLock:        make(chan int64, 1),
-		cTotal:         startCredits,
+		cTotal:         InitialCredits,
 		cIssued:        make(chan int64, 1),
 		bFactor:        bFactor,
 		aFactor:        aFactor,
