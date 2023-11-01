@@ -99,6 +99,8 @@ func (b *Breakwater) startTimeoutRoutine(duration time.Duration) {
 	go func() {
 		<-timer.C
 		logger("[Timeout]:	Unblocking all requests\n")
+		b.outgoingCredits <- 999999999
+		b.unblockNoCreditBlock()
 
 		// Unblock all requests by sending zero-credit signals
 		close(b.noCreditBlocker)
