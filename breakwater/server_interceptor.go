@@ -15,8 +15,6 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-var loadShedding bool = true
-
 /*
 Register a client if it is not already registered
 Return the Connection object and a boolean indicating if the client is new
@@ -169,7 +167,12 @@ func (b *Breakwater) rttUpdate() {
 	timeSinceLastUpdate := time.Since(b.lastUpdateTime)
 	if timeSinceLastUpdate.Microseconds() > RTT_MICROSECOND {
 		if b.isRTTUnlocked() {
-
+			if loadShedding {
+				newDelay := b.getDelay() // Assume this function returns the new delay
+				b.queueingDelayChan <- DelayOperation{Value: newDelay}
+				// log the delay
+				logger("[RTT Update]: delay is %f", newDelay)
+			}
 			prevCTotal := b.cTotal
 			b.lastUpdateTime = time.Now()
 
@@ -368,9 +371,12 @@ func (b *Breakwater) UnaryInterceptor(ctx context.Context, req interface{}, info
 	// delayMicroSeconds := float64(elapsed - timeDeductions)
 
 	if loadShedding {
-		delay := b.getDelay()
-		logger("[Req handled]: Server-side queuing delay is %f microseconds", delay)
-		if delay < b.aqmDelay {
+		responseChan := make(chan float64)
+		b.queueingDelayChan <- DelayOperation{Response: responseChan}
+		queueingDelay := <-responseChan // This will wait for the response
+		logger("[Req handled]: Server-side queuing delay is %f microseconds", queueingDelay)
+
+		if queueingDelay < b.aqmDelay {
 			logger("[Load Shedding] not applied, delay within AQM threshold")
 		} else {
 			logger("[Load Shedding] applied, delay beyond AQM threshold")

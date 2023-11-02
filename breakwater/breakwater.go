@@ -13,6 +13,7 @@ const DELAY_THRESHOLD_PERCENT float64 = 0.4 // target is 0.4 of SLA as per Break
 const MAX_Q_LENGTH = 50                     // max length of queue
 var debug bool = false
 var useClientTimeExpiration bool = true
+var loadShedding bool = true
 
 /*
 DATA STRUCTURES:
@@ -33,22 +34,23 @@ type Connection struct {
 type Breakwater struct {
 	clientMap sync.Map // Map of client connections
 	// requestMap      sync.Map  // Map of requests for time tracking
-	lastUpdateTime  time.Time // last time since an RTT update
-	numClients      chan int64
-	rttLock         chan int64 // Lock for cTotal, cIssued, lastUpdateTime update
-	cTotal          int64      // global pool of credits
-	cIssued         chan int64 // total credits currently issued
-	aFactor         float64    // aggressive factor for increasing credits
-	bFactor         float64    // multiplicative factor for decreasing credits
-	SLO             int64      // SLA in microseconds
-	thresholdDelay  float64    // threshold delay (for server-side token reduction) in microseconds
-	aqmDelay        float64    // aqm threshold (for client and server-side AQM) in microseconds
-	prevHist        *metrics.Float64Histogram
-	currHist        *metrics.Float64Histogram
-	id              uuid.UUID
-	pendingOutgoing chan int64 // pending outgoing requests
-	noCreditBlocker chan int64 // block requests when no credits
-	outgoingCredits chan int64 // outgoing credits
+	lastUpdateTime    time.Time // last time since an RTT update
+	numClients        chan int64
+	rttLock           chan int64 // Lock for cTotal, cIssued, lastUpdateTime update
+	cTotal            int64      // global pool of credits
+	cIssued           chan int64 // total credits currently issued
+	aFactor           float64    // aggressive factor for increasing credits
+	bFactor           float64    // multiplicative factor for decreasing credits
+	SLO               int64      // SLA in microseconds
+	thresholdDelay    float64    // threshold delay (for server-side token reduction) in microseconds
+	aqmDelay          float64    // aqm threshold (for client and server-side AQM) in microseconds
+	prevHist          *metrics.Float64Histogram
+	currHist          *metrics.Float64Histogram
+	id                uuid.UUID
+	pendingOutgoing   chan int64 // pending outgoing requests
+	noCreditBlocker   chan int64 // block requests when no credits
+	outgoingCredits   chan int64 // outgoing credits
+	queueingDelayChan chan DelayOperation
 }
 
 // // TODO: Add fields for gRPC contexts
@@ -77,9 +79,10 @@ func InitBreakwater(param BWParameters) (bw *Breakwater) {
 		currHist:       nil,
 		id:             uuid.New(),
 		// Outgoing buffer drops requests if > 50 requests in queue
-		pendingOutgoing: make(chan int64, MAX_Q_LENGTH),
-		noCreditBlocker: make(chan int64, 1),
-		outgoingCredits: make(chan int64, 1),
+		pendingOutgoing:   make(chan int64, MAX_Q_LENGTH),
+		noCreditBlocker:   make(chan int64, 1),
+		outgoingCredits:   make(chan int64, 1),
+		queueingDelayChan: make(chan DelayOperation),
 	}
 	debug = param.Verbose
 	// unblock blocker
@@ -92,8 +95,32 @@ func InitBreakwater(param BWParameters) (bw *Breakwater) {
 	bw.numClients <- 0
 	bw.cIssued <- 0
 
-	bw.startTimeoutRoutine(20 * time.Second)
+	if loadShedding {
+		// Start the goroutine that manages queueingDelay
+		go bw.manageQueueingDelay()
+	}
+
+	bw.startTimeoutRoutine(25 * time.Second)
 	return
+}
+
+func (b *Breakwater) manageQueueingDelay() {
+	var queueingDelay float64 // This variable is owned by this goroutine
+
+	for op := range b.queueingDelayChan {
+		if op.Response != nil {
+			// A read is being requested
+			op.Response <- queueingDelay
+		} else {
+			// A write is being requested
+			queueingDelay = op.Value
+		}
+	}
+}
+
+type DelayOperation struct {
+	Value    float64      // For setting a value
+	Response chan float64 // For getting a value
 }
 
 func (b *Breakwater) startTimeoutRoutine(duration time.Duration) {
