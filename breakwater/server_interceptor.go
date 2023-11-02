@@ -10,8 +10,12 @@ import (
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/internal/status"
 	"google.golang.org/grpc/metadata"
 )
+
+var loadShedding bool = true
 
 /*
 Register a client if it is not already registered
@@ -165,6 +169,7 @@ func (b *Breakwater) rttUpdate() {
 	timeSinceLastUpdate := time.Since(b.lastUpdateTime)
 	if timeSinceLastUpdate.Microseconds() > RTT_MICROSECOND {
 		if b.isRTTUnlocked() {
+
 			prevCTotal := b.cTotal
 			b.lastUpdateTime = time.Now()
 
@@ -362,7 +367,16 @@ func (b *Breakwater) UnaryInterceptor(ctx context.Context, req interface{}, info
 	// Account for deductions of outgoing calls
 	// delayMicroSeconds := float64(elapsed - timeDeductions)
 
-	// logger("[Req handled]: Time delay was %f after deduction of %d", delayMicroSeconds, timeDeductions)
+	if loadShedding {
+		delay := b.getDelay()
+		logger("[Req handled]: Server-side queuing delay is %f microseconds", delay)
+		if delay < b.aqmDelay {
+			logger("[Load Shedding] not applied, delay within AQM threshold")
+		} else {
+			logger("[Load Shedding] applied, delay beyond AQM threshold")
+			return nil, status.Errorf(codes.ResourceExhausted, "Server-side queuing delay is beyond AQM threshold")
+		}
+	}
 
 	// Update delay as neccessary
 	// currGreatestDelay := <-b.currGreatestDelay
