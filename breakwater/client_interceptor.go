@@ -104,7 +104,7 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 		// time in microseconds
 		if useClientTimeExpiration {
 			timeTaken := time.Since(timeStart).Microseconds()
-			if timeTaken > b.SLO {
+			if float64(timeTaken) > b.aqmDelay {
 				// drop request
 				logger("[Waiting in queue]:	Dropping request due to AQM threshold\n")
 				b.unblockNoCreditBlock()
