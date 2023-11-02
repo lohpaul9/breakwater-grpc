@@ -11,8 +11,8 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/internal/status"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 /*
