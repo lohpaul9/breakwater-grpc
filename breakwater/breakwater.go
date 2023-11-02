@@ -59,6 +59,8 @@ type Breakwater struct {
 
 func InitBreakwater(param BWParameters) (bw *Breakwater) {
 	bFactor, aFactor, SLO, InitialCredits := param.BFactor, param.AFactor, param.SLO, param.InitialCredits
+	thresholdDelay := float64(SLO) * DELAY_THRESHOLD_PERCENT
+	aqmDelay := thresholdDelay * 2.0
 	bw = &Breakwater{
 		clientMap:      sync.Map{},
 		lastUpdateTime: time.Now(),
@@ -69,8 +71,8 @@ func InitBreakwater(param BWParameters) (bw *Breakwater) {
 		bFactor:        bFactor,
 		aFactor:        aFactor,
 		SLO:            SLO,
-		thresholdDelay: float64(SLO) * DELAY_THRESHOLD_PERCENT,
-		aqmDelay:       float64(SLO) * 2.0,
+		thresholdDelay: thresholdDelay,
+		aqmDelay:       aqmDelay,
 		prevHist:       nil,
 		currHist:       nil,
 		id:             uuid.New(),
