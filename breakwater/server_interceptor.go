@@ -380,7 +380,7 @@ func (b *Breakwater) UnaryInterceptor(ctx context.Context, req interface{}, info
 			logger("[Load Shedding] not applied, delay within AQM threshold")
 		} else {
 			logger("[Load Shedding] applied, delay beyond AQM threshold")
-			return nil, status.Errorf(codes.ResourceExhausted, "Server-side queuing delay is beyond AQM threshold")
+			return nil, status.Errorf(codes.ResourceExhausted, "Server-side queuing delay is beyond AQM threshold for client %s", clientId)
 		}
 	}
 
