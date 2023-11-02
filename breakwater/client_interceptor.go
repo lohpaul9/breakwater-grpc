@@ -3,6 +3,7 @@ package breakwater
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -62,7 +63,7 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 	// retrieve price table for downstream clients queueing delay
 	// var isDownstream bool = false
 	var reqid uuid.UUID
-	// timeStart := time.Now()
+	timeStart := time.Now()
 	// var reqTimeData request
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok && len(md["reqid"]) > 0 {
@@ -97,6 +98,23 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 		logger("[Waiting in queue]:	Checking if unblock available\n")
 		// blocks until credit available
 		<-b.noCreditBlocker
+
+		// check that our time spent in queue has not exceeded the aqm threshold
+		// if so, we should drop the request
+		// time in microseconds
+		if useClientTimeExpiration {
+			timeTaken := time.Since(timeStart).Microseconds()
+			if float64(timeTaken) > b.aqmDelay {
+				// drop request
+				logger("[Waiting in queue]:	Dropping request due to AQM threshold\n")
+				b.unblockNoCreditBlock()
+				b.dequeueRequest()
+				return status.Errorf(codes.ResourceExhausted,
+					"request dropped due to client side AQM threshold breached. Delay (us) was: %d",
+					timeTaken)
+			}
+		}
+
 		logger("[Waiting in queue]:	Unblock available, checking if credits are sufficient\n")
 		// Check actual number of credits (channel for binary semaphore)
 		creditBalance := <-b.outgoingCredits

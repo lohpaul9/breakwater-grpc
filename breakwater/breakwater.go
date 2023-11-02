@@ -12,6 +12,7 @@ const RTT_MICROSECOND = 5000                // RTT in microseconds
 const DELAY_THRESHOLD_PERCENT float64 = 0.4 // target is 0.4 of SLA as per Breakwater
 const MAX_Q_LENGTH = 50                     // max length of queue
 var debug bool = false
+var useClientTimeExpiration bool = true
 
 /*
 DATA STRUCTURES:
@@ -40,7 +41,8 @@ type Breakwater struct {
 	aFactor         float64    // aggressive factor for increasing credits
 	bFactor         float64    // multiplicative factor for decreasing credits
 	SLO             int64      // SLA in microseconds
-	thresholdDelay  float64    // threshold delay in microseconds
+	thresholdDelay  float64    // threshold delay (for server-side token reduction) in microseconds
+	aqmDelay        float64    // aqm threshold (for client and server-side AQM) in microseconds
 	prevHist        *metrics.Float64Histogram
 	currHist        *metrics.Float64Histogram
 	id              uuid.UUID
@@ -57,6 +59,8 @@ type Breakwater struct {
 
 func InitBreakwater(param BWParameters) (bw *Breakwater) {
 	bFactor, aFactor, SLO, InitialCredits := param.BFactor, param.AFactor, param.SLO, param.InitialCredits
+	thresholdDelay := float64(SLO) * DELAY_THRESHOLD_PERCENT
+	aqmDelay := thresholdDelay * 2.0
 	bw = &Breakwater{
 		clientMap:      sync.Map{},
 		lastUpdateTime: time.Now(),
@@ -67,7 +71,8 @@ func InitBreakwater(param BWParameters) (bw *Breakwater) {
 		bFactor:        bFactor,
 		aFactor:        aFactor,
 		SLO:            SLO,
-		thresholdDelay: float64(SLO) * DELAY_THRESHOLD_PERCENT,
+		thresholdDelay: thresholdDelay,
+		aqmDelay:       aqmDelay,
 		prevHist:       nil,
 		currHist:       nil,
 		id:             uuid.New(),
