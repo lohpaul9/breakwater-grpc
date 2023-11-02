@@ -1,4 +1,4 @@
-module github.com/lohpaul9/breakwater-grpc
+module github.com/Jiali-Xing/breakwater-grpc
 
 go 1.19
 

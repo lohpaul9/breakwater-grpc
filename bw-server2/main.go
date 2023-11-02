@@ -27,7 +27,7 @@ import (
 	"net"
 	"time"
 
-	bw "github.com/lohpaul9/breakwater-grpc/breakwater"
+	bw "github.com/Jiali-Xing/breakwater-grpc/breakwater"
 
 	"errors"
 

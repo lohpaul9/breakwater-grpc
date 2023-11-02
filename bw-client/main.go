@@ -27,7 +27,7 @@ import (
 	"log"
 	"time"
 
-	bw "github.com/lohpaul9/breakwater-grpc/breakwater"
+	bw "github.com/Jiali-Xing/breakwater-grpc/breakwater"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/examples/data"

@@ -3,6 +3,7 @@ package breakwater
 import (
 	"fmt"
 	"math"
+	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -14,7 +15,11 @@ var (
 
 // logger is to mock a sophisticated logging system. To simplify the example, we just print out the content.
 func logger(format string, a ...interface{}) {
-	fmt.Printf("LOG:\t"+format+"\n", a...)
+	if debug {
+		// print to stdout with timestamp
+		timestamp := time.Now().Format("2006-01-02T15:04:05.999999999-07:00")
+		fmt.Printf("LOG: "+timestamp+"|\t"+format+"\n", a...)
+	}
 }
 
 func min(a, b int64) int64 {
@@ -36,10 +41,11 @@ func roundedInt(x float64) int64 {
 }
 
 type BWParameters struct {
-	bFactor      float64
-	aFactor      float64
-	SLO          int64
-	startCredits int64
+	BFactor        float64
+	AFactor        float64
+	SLO            int64
+	InitialCredits int64
+	Verbose        bool
 }
 
 /*
@@ -50,8 +56,9 @@ d_t = 40% of SLA,
 AQM threshold = 2 * d_t
 */
 var BWParametersDefault BWParameters = BWParameters{
-	bFactor:      0.02,
-	aFactor:      0.001,
-	SLO:          160,
-	startCredits: 100,
+	BFactor:        0.02,
+	AFactor:        0.001,
+	SLO:            160,
+	InitialCredits: 1000,
+	Verbose:        false,
 }
