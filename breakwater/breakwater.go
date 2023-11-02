@@ -87,7 +87,7 @@ func InitBreakwater(param BWParameters) (bw *Breakwater) {
 	bw.numClients <- 0
 	bw.cIssued <- 0
 
-	bw.startTimeoutRoutine(10 * time.Second)
+	bw.startTimeoutRoutine(20 * time.Second)
 	return
 }
 

@@ -3,6 +3,7 @@ package breakwater
 import (
 	"fmt"
 	"math"
+	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -15,7 +16,9 @@ var (
 // logger is to mock a sophisticated logging system. To simplify the example, we just print out the content.
 func logger(format string, a ...interface{}) {
 	if debug {
-		fmt.Printf("LOG:\t"+format+"\n", a...)
+		// print to stdout with timestamp
+		timestamp := time.Now().Format("2006-01-02T15:04:05.999999999-07:00")
+		fmt.Printf("LOG: "+timestamp+"|\t"+format+"\n", a...)
 	}
 }
 
