@@ -106,12 +106,11 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 			timeTaken := time.Since(timeStart).Microseconds()
 			if float64(timeTaken) > b.aqmDelay {
 				// drop request
-				logger("[Waiting in queue]:	Dropping request due to AQM threshold\n")
+				logger("[Client Req Expired]:	Dropping request due to client side req expiration. Delay (us) was: %d\n", timeTaken)
 				b.unblockNoCreditBlock()
 				b.dequeueRequest()
 				return status.Errorf(codes.ResourceExhausted,
-					"request dropped due to client side AQM threshold breached. Delay (us) was: %d",
-					timeTaken)
+					"Client id %s request expired in queue. Delay (us) was: %d", b.id.String(), timeTaken)
 			}
 		}
 
