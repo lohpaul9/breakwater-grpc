@@ -14,6 +14,7 @@ const MAX_Q_LENGTH = 50                     // max length of queue
 var debug bool = false
 var useClientTimeExpiration bool = true
 var loadShedding bool = true
+var useClientQueueLength bool = false
 
 /*
 DATA STRUCTURES:

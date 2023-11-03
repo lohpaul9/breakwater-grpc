@@ -84,7 +84,7 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 
 	// Check if queue is too long
 	var added bool = b.queueRequest()
-	if !added {
+	if useClientQueueLength && !added {
 		return status.Errorf(codes.ResourceExhausted, "Client queue too long, request dropped at client %s", b.id.String())
 	}
 
