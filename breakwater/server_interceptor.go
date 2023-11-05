@@ -84,7 +84,7 @@ func (b *Breakwater) getDelay() float64 {
 		return 0.0
 	}
 
-	gapLatency := maximumQueuingDelayus(b.prevHist, b.currHist)
+	gapLatency := maximumQueuingDelayus(b.prevHist, b.currHist) // in microseconds
 	// Store the current histogram for future reference
 	b.prevHist = b.currHist
 
@@ -96,7 +96,7 @@ func (b *Breakwater) getDelay() float64 {
 func maximumQueuingDelayus(earlier, later *metrics.Float64Histogram) float64 {
 	for i := len(earlier.Counts) - 1; i >= 0; i-- {
 		if later.Counts[i] > earlier.Counts[i] {
-			return later.Buckets[i] * 1000000
+			return later.Buckets[i] * 1000000 // convert to microseconds
 		}
 	}
 	return 0
@@ -357,13 +357,13 @@ func (b *Breakwater) UnaryInterceptor(ctx context.Context, req interface{}, info
 		responseChan := make(chan float64)
 		b.queueingDelayChan <- DelayOperation{Response: responseChan}
 		queueingDelay := <-responseChan // This will wait for the response
-		logger("[Req handled]: Server-side queuing delay is %f microseconds", queueingDelay)
+		// logger("[Req handled]: Server-side queuing delay is %f microseconds", queueingDelay)
 
 		if queueingDelay < b.aqmDelay {
-			logger("[Load Shedding] not applied, delay within AQM threshold")
+			logger("[Load Shedding] not applied, server-side queuing delay %f us is within AQM threshold", queueingDelay)
 		} else {
-			logger("[Load Shedding] applied, delay beyond AQM threshold")
-			return nil, status.Errorf(codes.ResourceExhausted, "Server-side queuing delay is beyond AQM threshold for client %s", clientId)
+			logger("[Load Shedding] applied, server-side queuing delay %f us is beyond AQM threshold", queueingDelay)
+			return nil, status.Errorf(codes.ResourceExhausted, "Server-side queuing delay is beyond AQM threshold")
 		}
 	}
 
@@ -427,54 +427,54 @@ func (b *Breakwater) UnaryInterceptor(ctx context.Context, req interface{}, info
 /*
 Used as a simple test for client side interceptors
 */
-func (b *Breakwater) DummyUnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, errMissingMetadata
-	}
+// func (b *Breakwater) DummyUnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+// 	md, ok := metadata.FromIncomingContext(ctx)
+// 	if !ok {
+// 		return nil, errMissingMetadata
+// 	}
 
-	demand, err1 := strconv.ParseInt(md["demand"][0], 10, 64)
-	clientId, err2 := uuid.Parse(md["id"][0])
-	_, err3 := uuid.Parse(md["reqid"][0])
+// 	demand, err1 := strconv.ParseInt(md["demand"][0], 10, 64)
+// 	clientId, err2 := uuid.Parse(md["id"][0])
+// 	_, err3 := uuid.Parse(md["reqid"][0])
 
-	if err1 != nil || err2 != nil || err3 != nil {
-		logger("[Received Req]:	Error: malformed metadata")
-		return nil, errMissingMetadata
-	}
+// 	if err1 != nil || err2 != nil || err3 != nil {
+// 		logger("[Received Req]:	Error: malformed metadata")
+// 		return nil, errMissingMetadata
+// 	}
 
-	// logger("[Received Req]:	The demand is %d\n", demand)
-	logger("[Received Req]:	The clientid is %s\n", clientId)
-	// logger("[Received Req]:	reqid is %s\n", reqId)
+// 	// logger("[Received Req]:	The demand is %d\n", demand)
+// 	logger("[Received Req]:	The clientid is %s\n", clientId)
+// 	// logger("[Received Req]:	reqid is %s\n", reqId)
 
-	// Register client if unregistered
-	conn, loaded := b.RegisterClient(clientId, demand)
+// 	// Register client if unregistered
+// 	conn, loaded := b.RegisterClient(clientId, demand)
 
-	// update credits issued
-	<-conn.issuedWriteLock
-	issuedCredits := conn.issued - 1
-	if !loaded {
-		issuedCredits = 3
-	}
-	if issuedCredits == 0 {
-		time.Sleep(1 * time.Second)
-		issuedCredits = 3
-	}
-	conn.issued = issuedCredits
-	b.clientMap.Store(clientId, conn)
-	logger("[Received Req]:	issued credits is %d\n", issuedCredits)
+// 	// update credits issued
+// 	<-conn.issuedWriteLock
+// 	issuedCredits := conn.issued - 1
+// 	if !loaded {
+// 		issuedCredits = 3
+// 	}
+// 	if issuedCredits == 0 {
+// 		time.Sleep(1 * time.Second)
+// 		issuedCredits = 3
+// 	}
+// 	conn.issued = issuedCredits
+// 	b.clientMap.Store(clientId, conn)
+// 	logger("[Received Req]:	issued credits is %d\n", issuedCredits)
 
-	conn.issuedWriteLock <- 1
-	// Piggyback updated credits issued
-	header := metadata.Pairs("credits", strconv.FormatInt(issuedCredits, 10))
-	grpc.SendHeader(ctx, header)
+// 	conn.issuedWriteLock <- 1
+// 	// Piggyback updated credits issued
+// 	header := metadata.Pairs("credits", strconv.FormatInt(issuedCredits, 10))
+// 	grpc.SendHeader(ctx, header)
 
-	m, err := handler(ctx, req)
+// 	m, err := handler(ctx, req)
 
-	if err != nil {
-		logger("RPC failed with error %v", err)
-	}
-	return m, err
-}
+// 	if err != nil {
+// 		logger("RPC failed with error %v", err)
+// 	}
+// 	return m, err
+// }
 
 func (b *Breakwater) PrintOutgoingCredits() {
 	o := <-b.outgoingCredits
