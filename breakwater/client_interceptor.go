@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -62,25 +61,25 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 
 	// retrieve price table for downstream clients queueing delay
 	// var isDownstream bool = false
-	var reqid uuid.UUID
+	// var reqid uuid.UUID
 	timeStart := time.Now()
 	// var reqTimeData request
-	md, ok := metadata.FromIncomingContext(ctx)
-	if ok && len(md["reqid"]) > 0 {
-		logger("[Before queue]:	is downstream request\n")
-		// reqid, _ := uuid.Parse(md["reqid"][0])
-		// r, ok := b.requestMap.Load(reqid)
-		// isDownstream = true
-		// if ok {
-		// 	// should always be okay (the reqId should already be stored)
-		// 	reqTimeData = r.(request)
-		// } else {
-		// 	b.requestMap.Store(reqid, request{reqid, 0})
-		// }
-	} else {
-		// This is first upstream client / end user
-		reqid = uuid.New()
-	}
+	// md, ok := metadata.FromIncomingContext(ctx)
+	// if ok && len(md["reqid"]) > 0 {
+	// 	logger("[Before queue]:	is downstream request\n")
+	// 	// reqid, _ := uuid.Parse(md["reqid"][0])
+	// 	// r, ok := b.requestMap.Load(reqid)
+	// 	// isDownstream = true
+	// 	// if ok {
+	// 	// 	// should always be okay (the reqId should already be stored)
+	// 	// 	reqTimeData = r.(request)
+	// 	// } else {
+	// 	// 	b.requestMap.Store(reqid, request{reqid, 0})
+	// 	// }
+	// } else {
+	// 	// This is first upstream client / end user
+	// 	reqid = uuid.New()
+	// }
 
 	// Check if queue is too long
 	var added bool = b.queueRequest()
@@ -143,7 +142,7 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 	// Get demand
 	demand := b.getDemand()
 	logger("[Waiting in queue]:	demand is %d\n", demand)
-	ctx = metadata.AppendToOutgoingContext(ctx, "demand", strconv.Itoa(demand), "id", b.id.String(), "reqid", reqid.String())
+	ctx = metadata.AppendToOutgoingContext(ctx, "demand", strconv.Itoa(demand), "id", b.id.String())
 
 	// After breaking out of request loop, remove request from queue and send request
 	// This should never be blocked

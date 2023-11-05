@@ -20,9 +20,39 @@ Register a client if it is not already registered
 Return the Connection object and a boolean indicating if the client is new
 loaded is true if the value was loaded instead of stored
 */
-func (b *Breakwater) RegisterClient(id uuid.UUID, demand int64) (Connection, bool) {
+// func (b *Breakwater) RegisterClient(id uuid.UUID, demand int64) (Connection, bool) {
 
-	var c *Connection = &Connection{
+// 	var c *Connection = &Connection{
+// 		issued:          0,
+// 		issuedWriteLock: make(chan int64, 1),
+// 		demand:          demand,
+// 		demandWriteLock: make(chan int64, 1),
+// 		id:              id,
+// 		lastUpdated:     make(chan time.Time, 1),
+// 	}
+// 	c.demandWriteLock <- 1
+// 	c.issuedWriteLock <- 1
+// 	// update to be before the last update time
+// 	c.lastUpdated <- time.Now().Add(-1 * time.Second)
+
+// 	storedConn, loaded := b.clientMap.LoadOrStore(id, *c)
+// 	if !loaded {
+// 		num := <-b.numClients
+// 		b.numClients <- num + 1
+// 	}
+
+// 	return storedConn.(Connection), loaded
+// }
+
+// Jiali: We need another fast function for server side interceptor to check and register client
+func (b *Breakwater) RegisterClient(id uuid.UUID, demand int64) {
+	// Check if the client already exists, if so, return.
+	if _, exists := b.clientMap.Load(id); exists {
+		return
+	}
+
+	// Only create a new Connection if the client does not already exist.
+	c := Connection{
 		issued:          0,
 		issuedWriteLock: make(chan int64, 1),
 		demand:          demand,
@@ -32,16 +62,13 @@ func (b *Breakwater) RegisterClient(id uuid.UUID, demand int64) (Connection, boo
 	}
 	c.demandWriteLock <- 1
 	c.issuedWriteLock <- 1
-	// update to be before the last update time
 	c.lastUpdated <- time.Now().Add(-1 * time.Second)
 
-	storedConn, loaded := b.clientMap.LoadOrStore(id, *c)
-	if !loaded {
-		num := <-b.numClients
-		b.numClients <- num + 1
-	}
-
-	return storedConn.(Connection), loaded
+	// Use LoadOrStore to attempt to store the new connection, and also safely check if it was already present.
+	b.clientMap.Store(id, c)
+	num := <-b.numClients
+	b.numClients <- num + 1
+	return
 }
 
 /*
@@ -261,7 +288,7 @@ func (b *Breakwater) calculateCreditsToIssue(demand int64, connCPrevious int64) 
 
 /*
 Function: Update credits issued to a connection
-Runs once every time a request is issued
+Runs once every time a request is received
 1. Retrieve demand from metadata
 2. Calculate cOC (the new overcommitment value, which is leftover / numClients, or 1)
 3. If cIssued < cTotal:
@@ -326,6 +353,20 @@ It should
 4. Occassionally update cTotal
 */
 func (b *Breakwater) UnaryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	if loadShedding {
+		responseChan := make(chan float64)
+		b.queueingDelayChan <- DelayOperation{Response: responseChan}
+		queueingDelay := <-responseChan // This will wait for the response
+		logger("[Req handled]: Server-side queuing delay is %f microseconds", queueingDelay)
+
+		if queueingDelay < b.aqmDelay {
+			logger("[Load Shedding] not applied, delay within AQM threshold")
+		} else {
+			logger("[Load Shedding] applied, delay beyond AQM threshold")
+			return nil, status.Errorf(codes.ResourceExhausted, "Server-side queuing delay is beyond AQM threshold for client %s", clientId)
+		}
+	}
+
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return nil, errMissingMetadata
@@ -333,14 +374,14 @@ func (b *Breakwater) UnaryInterceptor(ctx context.Context, req interface{}, info
 
 	demand, err1 := strconv.ParseInt(md["demand"][0], 10, 64)
 	clientId, err2 := uuid.Parse(md["id"][0])
-	reqId, err3 := uuid.Parse(md["reqid"][0])
+	// reqId, err3 := uuid.Parse(md["reqid"][0])
 
-	if err1 != nil || err2 != nil || err3 != nil {
+	if err1 != nil || err2 != nil {
 		logger("[Received Req]:	Error: malformed metadata")
 		return nil, errMissingMetadata
 	}
 
-	logger("[Received Req]:	Method: %s, ClientId: %s, ReqId: %s, Demand %d", info.FullMethod, clientId, reqId, demand)
+	logger("[Received Req]:	ClientId: %s, Demand %d", clientId, demand)
 
 	// Register client if unregistered
 	b.RegisterClient(clientId, demand)
@@ -369,20 +410,6 @@ func (b *Breakwater) UnaryInterceptor(ctx context.Context, req interface{}, info
 	// b.requestMap.Delete(reqId)
 	// Account for deductions of outgoing calls
 	// delayMicroSeconds := float64(elapsed - timeDeductions)
-
-	if loadShedding {
-		responseChan := make(chan float64)
-		b.queueingDelayChan <- DelayOperation{Response: responseChan}
-		queueingDelay := <-responseChan // This will wait for the response
-		logger("[Req handled]: Server-side queuing delay is %f microseconds", queueingDelay)
-
-		if queueingDelay < b.aqmDelay {
-			logger("[Load Shedding] not applied, delay within AQM threshold")
-		} else {
-			logger("[Load Shedding] applied, delay beyond AQM threshold")
-			return nil, status.Errorf(codes.ResourceExhausted, "Server-side queuing delay is beyond AQM threshold for client %s", clientId)
-		}
-	}
 
 	// Update delay as neccessary
 	// currGreatestDelay := <-b.currGreatestDelay
