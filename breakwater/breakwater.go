@@ -86,9 +86,9 @@ func InitBreakwater(param BWParameters) (bw *Breakwater) {
 		queueingDelayChan: make(chan DelayOperation),
 	}
 	debug = param.Verbose
-	useClientTimeExpiration = param.useClientTimeExpiration
-	loadShedding = param.loadShedding
-	useClientQueueLength = param.useClientQueueLength
+	useClientTimeExpiration = param.UseClientTimeExpiration
+	loadShedding = param.LoadShedding
+	useClientQueueLength = param.UseClientQueueLength
 	// unblock blocker
 	bw.noCreditBlocker <- 1
 	// give 1 credit to start

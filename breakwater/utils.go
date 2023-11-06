@@ -46,9 +46,9 @@ type BWParameters struct {
 	SLO                     int64
 	InitialCredits          int64
 	Verbose                 bool
-	useClientTimeExpiration bool
-	loadShedding            bool
-	useClientQueueLength    bool
+	UseClientTimeExpiration bool
+	LoadShedding            bool
+	UseClientQueueLength    bool
 }
 
 /*
@@ -64,7 +64,7 @@ var BWParametersDefault BWParameters = BWParameters{
 	SLO:                     160,
 	InitialCredits:          1000,
 	Verbose:                 false,
-	useClientTimeExpiration: true,
-	loadShedding:            true,
-	useClientQueueLength:    false,
+	UseClientTimeExpiration: true,
+	LoadShedding:            true,
+	UseClientQueueLength:    false,
 }
