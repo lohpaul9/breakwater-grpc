@@ -171,15 +171,5 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 		b.outgoingCredits <- max(outgoingCredits, 1)
 		b.unblockNoCreditBlock()
 	}
-
-	// // Update time deductions
-	// timeEnd := time.Now()
-	// timeElapsed := timeEnd.Sub(timeStart).Microseconds()
-	// if isDownstream {
-	// 	reqTimeData.timeDeductionsMicrosec += timeElapsed
-	// 	// b.requestMap.Store(reqTimeData.reqID, reqTimeData)
-	// 	logger("[Received Resp]:	Downstream client - total time deduction %d\n", reqTimeData.timeDeductionsMicrosec)
-	// }
-
 	return err
 }

@@ -390,30 +390,17 @@ func (b *Breakwater) UnaryInterceptor(ctx context.Context, req interface{}, info
 	logger("[Received Req]:	issued credits is %d", issuedCredits)
 
 	// Piggyback updated credits issued
-	// header := metadata.Pairs("credits", strconv.FormatInt(issuedCredits, 10))
 	header := metadata.Pairs("credits", strconv.FormatInt(issuedCredits, 10))
-	grpc.SendHeader(ctx, header)
+	// grpc.SendHeader(ctx, header)
+	// Set the header to be sent with the response or error
+	err := grpc.SetHeader(ctx, header)
+	if err != nil {
+		logger("Failed to set header: %v", err)
+	}
 
-	// Start the timer
-	// b.requestMap.Store(reqId, request{reqID: reqId, timeDeductionsMicrosec: 0})
-	// time_start := time.Now()
-
-	// Call the handler
+	// Call the handler function to handle the request
 	logger("[Handling Req]:	Handling req")
 	m, err := handler(ctx, req)
-
-	// End the timer
-	// time_end := time.Now()
-	// elapsed := time_end.Sub(time_start).Microseconds()
-	// reqTimer, _ := b.requestMap.Load(reqId)
-	// timeDeductions := reqTimer.(request).timeDeductionsMicrosec
-	// b.requestMap.Delete(reqId)
-	// Account for deductions of outgoing calls
-	// delayMicroSeconds := float64(elapsed - timeDeductions)
-
-	// Update delay as neccessary
-	// currGreatestDelay := <-b.currGreatestDelay
-	// b.currGreatestDelay <- math.Max(currGreatestDelay, delayMicroSeconds)
 
 	// Does update once every rtt in separate goroutine
 	go b.rttUpdate()
