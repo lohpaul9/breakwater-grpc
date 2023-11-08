@@ -66,7 +66,7 @@ func InitBreakwater(param BWParameters) (bw *Breakwater) {
 	aqmDelay := thresholdDelay * 2.0
 	bw = &Breakwater{
 		clientMap:      sync.Map{},
-		lastUpdateTime: time.Now(),
+		lastUpdateTime: time.Now().Add(-1 * time.Second),
 		numClients:     make(chan int64, 1),
 		rttLock:        make(chan int64, 1),
 		cTotal:         InitialCredits,
@@ -100,6 +100,8 @@ func InitBreakwater(param BWParameters) (bw *Breakwater) {
 	bw.cIssued <- 0
 
 	if param.ServerSide {
+		// log
+		logger("[Server Init]:	Initialized server with params: bFactor: %f, aFactor: %f, SLO: %d, InitialCredits: %d\n", bFactor, aFactor, SLO, InitialCredits)
 		// Start the goroutine that updates credits periodically
 		// Does update once every rtt in separate goroutine
 		go bw.rttUpdate()
