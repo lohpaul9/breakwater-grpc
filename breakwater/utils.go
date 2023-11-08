@@ -41,6 +41,7 @@ func roundedInt(x float64) int64 {
 }
 
 type BWParameters struct {
+	ServerSide              bool
 	BFactor                 float64
 	AFactor                 float64
 	SLO                     int64
@@ -59,6 +60,7 @@ d_t = 40% of SLA,
 AQM threshold = 2 * d_t
 */
 var BWParametersDefault BWParameters = BWParameters{
+	ServerSide:              false,
 	BFactor:                 0.02,
 	AFactor:                 0.001,
 	SLO:                     160,

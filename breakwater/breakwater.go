@@ -99,9 +99,16 @@ func InitBreakwater(param BWParameters) (bw *Breakwater) {
 	bw.numClients <- 0
 	bw.cIssued <- 0
 
-	if loadShedding {
-		// Start the goroutine that manages queueingDelay
-		go bw.manageQueueingDelay()
+	if param.ServerSide {
+		// Start the goroutine that updates credits periodically
+		// Does update once every rtt in separate goroutine
+		go bw.rttUpdate()
+
+		// Start the goroutine that manages credits
+		if loadShedding {
+			// Start the goroutine that manages queueingDelay
+			go bw.manageQueueingDelay()
+		}
 	}
 
 	bw.startTimeoutRoutine(25 * time.Second)
