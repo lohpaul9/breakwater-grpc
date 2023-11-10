@@ -44,7 +44,8 @@ type Breakwater struct {
 	bFactor           float64    // multiplicative factor for decreasing credits
 	SLO               int64      // SLA in microseconds
 	thresholdDelay    float64    // threshold delay (for server-side token reduction) in microseconds
-	aqmDelay          float64    // aqm threshold (for client and server-side AQM) in microseconds
+	aqmDelay          float64    // aqm threshold (for server-side AQM) in microseconds
+	clientExpiration  int64      // client expiration time in microseconds
 	prevHist          *metrics.Float64Histogram
 	currHist          *metrics.Float64Histogram
 	id                uuid.UUID
@@ -65,20 +66,21 @@ func InitBreakwater(param BWParameters) (bw *Breakwater) {
 	thresholdDelay := float64(SLO) * DELAY_THRESHOLD_PERCENT
 	aqmDelay := thresholdDelay * 2.0
 	bw = &Breakwater{
-		clientMap:      sync.Map{},
-		lastUpdateTime: time.Now().Add(-1 * time.Second),
-		numClients:     make(chan int64, 1),
-		rttLock:        make(chan int64, 1),
-		cTotal:         InitialCredits,
-		cIssued:        make(chan int64, 1),
-		bFactor:        bFactor,
-		aFactor:        aFactor,
-		SLO:            SLO,
-		thresholdDelay: thresholdDelay,
-		aqmDelay:       aqmDelay,
-		prevHist:       nil,
-		currHist:       nil,
-		id:             uuid.New(),
+		clientMap:        sync.Map{},
+		lastUpdateTime:   time.Now().Add(-1 * time.Second),
+		numClients:       make(chan int64, 1),
+		rttLock:          make(chan int64, 1),
+		cTotal:           InitialCredits,
+		cIssued:          make(chan int64, 1),
+		bFactor:          bFactor,
+		aFactor:          aFactor,
+		SLO:              SLO,
+		thresholdDelay:   thresholdDelay,
+		aqmDelay:         aqmDelay,
+		clientExpiration: param.ClientExpiration,
+		prevHist:         nil,
+		currHist:         nil,
+		id:               uuid.New(),
 		// Outgoing buffer drops requests if > 50 requests in queue
 		pendingOutgoing:   make(chan int64, MAX_Q_LENGTH),
 		noCreditBlocker:   make(chan int64, 1),

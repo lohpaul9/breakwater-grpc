@@ -45,6 +45,7 @@ type BWParameters struct {
 	BFactor                 float64
 	AFactor                 float64
 	SLO                     int64
+	ClientExpiration        int64
 	InitialCredits          int64
 	Verbose                 bool
 	UseClientTimeExpiration bool
@@ -64,6 +65,7 @@ var BWParametersDefault BWParameters = BWParameters{
 	BFactor:                 0.02,
 	AFactor:                 0.001,
 	SLO:                     160,
+	ClientExpiration:        1000,
 	InitialCredits:          1000,
 	Verbose:                 false,
 	UseClientTimeExpiration: true,

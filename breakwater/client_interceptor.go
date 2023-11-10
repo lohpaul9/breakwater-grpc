@@ -103,7 +103,7 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 		// time in microseconds
 		if useClientTimeExpiration {
 			timeTaken := time.Since(timeStart).Microseconds()
-			if float64(timeTaken) > b.aqmDelay {
+			if timeTaken > b.clientExpiration {
 				// drop request
 				logger("[Client Req Expired]:	Dropping request due to client side req expiration. Delay (us) was: %d\n", timeTaken)
 				b.unblockNoCreditBlock()
