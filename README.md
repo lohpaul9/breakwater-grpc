@@ -33,19 +33,10 @@ In the implementation of the Breakwater framework, we wanted to (1) provide a fa
 
 The core logic of the Breakwater mechanism remains largely unchanged. For each server, with $C_{total}$ demarking the load the server can handle while maintaing its SLO, $C_{total}$ is maintained in the same way as the original implementation - through an additive increase if queuing delay is below some threshold tied to the SLO, and a multiplicative decrease otherwise. Each client also continues to track its total pending request as the client demand, and the system also provides demand speculation with overcommitment as detailed in Breakwater. Our implementation also preserves lazy credit messaging by piggybacking messages through the RPC interceptor.
 
-However, in order to implement Breakwater at the RPC interceptor level instead of at the kernel level, there had to be certain adaptations to the implementation.
+However, in order to implement Breakwater at the RPC interceptor level instead of at the operating syste level, there had to be certain adaptations to the implementation.
 
-In the original implementation, queueing delay is measured as the maximum of packet queue delay (time between when a packet till when it is processed by a Shenango kernel thread) plus the maximum of thread queueing delay (time between when a thread is created to process a request until it starts executing) in Shenango. This was accessible because the original implementation had access to these queues and also could modify Shenango's runtime library. Queueing delay is then used as the metric to decide whether a server should increase or decrease its load via $C_{total}$. 
+In the original implementation, queueing delay is measured as the maximum of packet queue delay (time between when a packet arrives till when it is processed by a Shenango kernel thread) plus the maximum of thread queueing delay (time between when a thread is created to process a request until it starts executing) in Shenango. This was accessible because the original implementation had access to these queues and also could modify Shenango's runtime library. Queueing delay is then used as the metric to decide whether a server should increase or decrease its load via $C_{total}$. 
 
-However, since our gRPC implementation does not have access to the IOKernel or direct queues in gRPC, we use Go's Runtime metrics to measure [goroutine delay](https://pkg.go.dev/runtime/metrics), which is the time goroutines have spent in the scheduler in a runnable state before actually running. This would be a metric directly analogous to the kernel thread queueing delay in Shenango. 
+However, since the gRPC implementation does not have access to the kernel thread queues in gRPC, we use Go's Runtime metrics to measure [goroutine delay](https://pkg.go.dev/runtime/metrics) instead, which is the time goroutines have spent in the scheduler in a runnable state before actually running. This would be a metric directly analogous to the kernel thread queueing delay in Shenango. 
 
-
-```
-Excerpt from Go runtime metrics github:
-/sched/latencies:seconds
-	Distribution of the time goroutines have spent in the scheduler
-	in a runnable state before actually running. Bucket counts
-	increase monotonically.
-```
-
-On the client side, because there is no direct access to the kernel thread queue, we use Go's channel primitive instead, where each outgoing request waits on a channel and a single request unblocks for each credit that the client receives. However, Go [does not provide a guarantee](https://tip.golang.org/ref/mem) on the order in which receivers are un-blocked from the channel, which may potentially starve certain requests and result in higher tail latencies, although the mean de-queue time should still be the same. However, we chose to take this approach so that each gRPC interceptor can act independently without the need for a central coordinator to determine the order of request de-queueing. 
+On the client side, we use Go's channel primitive, where each outgoing request waits on a channel and a single request unblocks for each credit that the client receives. However, Go [does not provide a guarantee](https://tip.golang.org/ref/mem) on the order in which receivers are un-blocked from a channel, which may potentially starve certain requests and result in higher tail latencies, although the mean de-queue time should still be the same. However, we chose to take this approach so that each gRPC interceptor can act independently without the need for a central coordinator to determine the order of request de-queueing. 
