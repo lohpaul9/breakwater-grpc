@@ -15,6 +15,7 @@ var debug bool = false
 var useClientTimeExpiration bool = true
 var loadShedding bool = true
 var useClientQueueLength bool = false
+var creditsOnFail bool = false
 
 /*
 DATA STRUCTURES:

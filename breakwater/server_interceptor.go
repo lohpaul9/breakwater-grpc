@@ -268,18 +268,18 @@ func (b *Breakwater) getHigherCreditsIssued(cOvercommit int64, demand int64, cPr
 
 func (b *Breakwater) calculateCreditsToIssue(demand int64, connCPrevious int64) (cNew int64) {
 	cOverCommit := b.calculateCreditsToOvercommit()
-
+	logger("[Issuing credits]: cOverCommit is %d", cOverCommit)
 	cIssued := <-b.cIssued
 	b.cIssued <- cIssued
 
 	// Here, b.cIssued is OVERALL issued credits, while c.issued is credits issued to a connection
 	if cIssued < b.cTotal {
 		// There is still space to issue credits
-		logger("[Issuing credits]: Under limit")
+		logger("[Issuing credits]: Under limit, cIssued is %d, cTotal is %d", cIssued, b.cTotal)
 		cNew = b.getHigherCreditsIssued(cOverCommit, demand, connCPrevious)
 	} else {
 		// At credit limit, so we only decrease
-		logger("[Issuing credits]: Over limit")
+		logger("[Issuing credits]: Over limit, cIssued is %d, cTotal is %d", cIssued, b.cTotal)
 		cNew = b.getLowerCreditsIssued(cOverCommit, demand, connCPrevious)
 	}
 
@@ -325,7 +325,7 @@ func (b *Breakwater) updateCreditsToIssue(clientID uuid.UUID, demand int64) (cNe
 		cNew = b.calculateCreditsToIssue(demand, connCPrevious)
 	}
 
-	logger("[Issuing credits]: Client %s, cPrev: %d, cNew: %d", clientID, connCPrevious, cNew)
+	logger("[Issuing credits]: Client %s, cPrev issued: %d, cNew: %d", clientID, connCPrevious, cNew)
 
 	// update conn credits
 	c.issued = cNew

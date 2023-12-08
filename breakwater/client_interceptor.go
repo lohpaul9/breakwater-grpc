@@ -109,7 +109,7 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 				b.unblockNoCreditBlock()
 				b.dequeueRequest()
 				return status.Errorf(codes.ResourceExhausted,
-					"Client id %s request expired in queue. Delay (us) was: %d", b.id.String(), timeTaken)
+					"Client id %s request expired in queue.", b.id.String())
 			}
 		}
 
@@ -152,20 +152,30 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 	var header metadata.MD // variable to store header and trailer
 	err := invoker(ctx, method, req, reply, cc, grpc.Header(&header))
 	if err != nil {
-		// The request failed. This error should be logged and examined.
+		// The request failed. if flag creditsOnFail is set, then we should add back one credit to the credit balance
+		if creditsOnFail {
+			select {
+			case credit := <-b.outgoingCredits:
+				b.outgoingCredits <- credit + 1
+			default:
+				// Log an error or handle the situation when there are no credits to retrieve
+				status.Errorf(codes.ResourceExhausted, "Client id %s has no credits to add back.", b.id.String())
+			}
+			b.unblockNoCreditBlock()
+		}
 		return err
 	}
 
 	if len(header["credits"]) > 0 {
 		cXNew, _ := strconv.ParseInt(header["credits"][0], 10, 64)
-		logger("[Received Resp]:	Updated spend credits is %d\n", cXNew)
+		logger("[Received Resp]:	Updated credits cXnew to spend is %d\n", cXNew)
 
 		// Update credits and unblock other requests
 		<-b.outgoingCredits
 		b.outgoingCredits <- max(cXNew, 1)
 		b.unblockNoCreditBlock()
 	} else {
-		logger("[Received Resp]:	No spend credits in response\n")
+		logger("[Received Resp]:	No attached credits in response\n")
 		// If no response, then just put to 1
 		outgoingCredits := <-b.outgoingCredits
 		b.outgoingCredits <- max(outgoingCredits, 1)
