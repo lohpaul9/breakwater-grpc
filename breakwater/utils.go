@@ -51,6 +51,7 @@ type BWParameters struct {
 	UseClientTimeExpiration bool
 	LoadShedding            bool
 	UseClientQueueLength    bool
+	RTT_MICROSECOND         int64
 }
 
 /*
@@ -71,4 +72,5 @@ var BWParametersDefault BWParameters = BWParameters{
 	UseClientTimeExpiration: true,
 	LoadShedding:            true,
 	UseClientQueueLength:    false,
+	RTT_MICROSECOND:         5000,
 }

@@ -8,7 +8,8 @@ import (
 	"github.com/google/uuid"
 )
 
-const RTT_MICROSECOND = 5000                // RTT in microseconds
+// make RTT configurable from input
+var RTT_MICROSECOND int64                   // RTT in microseconds
 const DELAY_THRESHOLD_PERCENT float64 = 0.4 // target is 0.4 of SLA as per Breakwater
 const MAX_Q_LENGTH = 50                     // max length of queue
 var debug bool = false
@@ -88,6 +89,7 @@ func InitBreakwater(param BWParameters) (bw *Breakwater) {
 		outgoingCredits:   make(chan int64, 1),
 		queueingDelayChan: make(chan DelayOperation),
 	}
+	RTT_MICROSECOND = param.RTT_MICROSECOND
 	debug = param.Verbose
 	useClientTimeExpiration = param.UseClientTimeExpiration
 	loadShedding = param.LoadShedding
