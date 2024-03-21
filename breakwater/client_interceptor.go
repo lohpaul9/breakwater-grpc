@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -62,30 +61,30 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 
 	// retrieve price table for downstream clients queueing delay
 	// var isDownstream bool = false
-	var reqid uuid.UUID
+	// var reqid uuid.UUID
 	timeStart := time.Now()
 	// var reqTimeData request
-	md, ok := metadata.FromIncomingContext(ctx)
-	if ok && len(md["reqid"]) > 0 {
-		logger("[Before queue]:	is downstream request\n")
-		// reqid, _ := uuid.Parse(md["reqid"][0])
-		// r, ok := b.requestMap.Load(reqid)
-		// isDownstream = true
-		// if ok {
-		// 	// should always be okay (the reqId should already be stored)
-		// 	reqTimeData = r.(request)
-		// } else {
-		// 	b.requestMap.Store(reqid, request{reqid, 0})
-		// }
-	} else {
-		// This is first upstream client / end user
-		reqid = uuid.New()
-	}
+	// md, ok := metadata.FromIncomingContext(ctx)
+	// if ok && len(md["reqid"]) > 0 {
+	// 	logger("[Before queue]:	is downstream request\n")
+	// 	// reqid, _ := uuid.Parse(md["reqid"][0])
+	// 	// r, ok := b.requestMap.Load(reqid)
+	// 	// isDownstream = true
+	// 	// if ok {
+	// 	// 	// should always be okay (the reqId should already be stored)
+	// 	// 	reqTimeData = r.(request)
+	// 	// } else {
+	// 	// 	b.requestMap.Store(reqid, request{reqid, 0})
+	// 	// }
+	// } else {
+	// 	// This is first upstream client / end user
+	// 	reqid = uuid.New()
+	// }
 
 	// Check if queue is too long
 	var added bool = b.queueRequest()
-	if !added {
-		return status.Errorf(codes.ResourceExhausted, "queue too long, request dropped")
+	if useClientQueueLength && !added {
+		return status.Errorf(codes.ResourceExhausted, "Client queue too long, request dropped at client %s", b.id.String())
 	}
 
 	// A note on non-deterministic channel waiting:
@@ -104,14 +103,13 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 		// time in microseconds
 		if useClientTimeExpiration {
 			timeTaken := time.Since(timeStart).Microseconds()
-			if float64(timeTaken) > b.aqmDelay {
+			if timeTaken > b.clientExpiration {
 				// drop request
-				logger("[Waiting in queue]:	Dropping request due to AQM threshold\n")
+				logger("[Client Req Expired]:	Dropping request due to client side req expiration. Delay (us) was: %d\n", timeTaken)
 				b.unblockNoCreditBlock()
 				b.dequeueRequest()
 				return status.Errorf(codes.ResourceExhausted,
-					"request dropped due to client side AQM threshold breached. Delay (us) was: %d",
-					timeTaken)
+					"Client id %s request expired in queue.", b.id.String())
 			}
 		}
 
@@ -144,7 +142,7 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 	// Get demand
 	demand := b.getDemand()
 	logger("[Waiting in queue]:	demand is %d\n", demand)
-	ctx = metadata.AppendToOutgoingContext(ctx, "demand", strconv.Itoa(demand), "id", b.id.String(), "reqid", reqid.String())
+	ctx = metadata.AppendToOutgoingContext(ctx, "demand", strconv.Itoa(demand), "id", b.id.String())
 
 	// After breaking out of request loop, remove request from queue and send request
 	// This should never be blocked
@@ -154,34 +152,34 @@ func (b *Breakwater) UnaryInterceptorClient(ctx context.Context, method string, 
 	var header metadata.MD // variable to store header and trailer
 	err := invoker(ctx, method, req, reply, cc, grpc.Header(&header))
 	if err != nil {
-		// The request failed. This error should be logged and examined.
+		// The request failed. if flag creditsOnFail is set, then we should add back one credit to the credit balance
+		if creditsOnFail {
+			select {
+			case credit := <-b.outgoingCredits:
+				b.outgoingCredits <- credit + 1
+			default:
+				// Log an error or handle the situation when there are no credits to retrieve
+				status.Errorf(codes.ResourceExhausted, "Client id %s has no credits to add back.", b.id.String())
+			}
+			b.unblockNoCreditBlock()
+		}
 		return err
 	}
 
 	if len(header["credits"]) > 0 {
 		cXNew, _ := strconv.ParseInt(header["credits"][0], 10, 64)
-		logger("[Received Resp]:	Updated spend credits is %d\n", cXNew)
+		logger("[Received Resp]:	Updated credits cXnew to spend is %d\n", cXNew)
 
 		// Update credits and unblock other requests
 		<-b.outgoingCredits
 		b.outgoingCredits <- max(cXNew, 1)
 		b.unblockNoCreditBlock()
 	} else {
-		logger("[Received Resp]:	No spend credits in response\n")
+		logger("[Received Resp]:	No attached credits in response\n")
 		// If no response, then just put to 1
 		outgoingCredits := <-b.outgoingCredits
 		b.outgoingCredits <- max(outgoingCredits, 1)
 		b.unblockNoCreditBlock()
 	}
-
-	// // Update time deductions
-	// timeEnd := time.Now()
-	// timeElapsed := timeEnd.Sub(timeStart).Microseconds()
-	// if isDownstream {
-	// 	reqTimeData.timeDeductionsMicrosec += timeElapsed
-	// 	// b.requestMap.Store(reqTimeData.reqID, reqTimeData)
-	// 	logger("[Received Resp]:	Downstream client - total time deduction %d\n", reqTimeData.timeDeductionsMicrosec)
-	// }
-
 	return err
 }

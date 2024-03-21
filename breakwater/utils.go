@@ -41,11 +41,17 @@ func roundedInt(x float64) int64 {
 }
 
 type BWParameters struct {
-	BFactor        float64
-	AFactor        float64
-	SLO            int64
-	InitialCredits int64
-	Verbose        bool
+	ServerSide              bool
+	BFactor                 float64
+	AFactor                 float64
+	SLO                     int64
+	ClientExpiration        int64
+	InitialCredits          int64
+	Verbose                 bool
+	UseClientTimeExpiration bool
+	LoadShedding            bool
+	UseClientQueueLength    bool
+	RTT_MICROSECOND         int64
 }
 
 /*
@@ -56,9 +62,15 @@ d_t = 40% of SLA,
 AQM threshold = 2 * d_t
 */
 var BWParametersDefault BWParameters = BWParameters{
-	BFactor:        0.02,
-	AFactor:        0.001,
-	SLO:            160,
-	InitialCredits: 1000,
-	Verbose:        false,
+	ServerSide:              false,
+	BFactor:                 0.02,
+	AFactor:                 0.001,
+	SLO:                     160,
+	ClientExpiration:        1000,
+	InitialCredits:          1000,
+	Verbose:                 false,
+	UseClientTimeExpiration: true,
+	LoadShedding:            true,
+	UseClientQueueLength:    false,
+	RTT_MICROSECOND:         5000,
 }
