@@ -6,7 +6,7 @@ Breakwater-grpc is a thread-safe implementation for the Breakwater microservice 
 
 To use the breakwater-grpc package, you need to have Go installed on your system. You can then install the package using the following command:
 
-```go get -u github.com/Jiali-Xing/breakwater-grpc```
+```go get -u github.com/lohpaul9/breakwater-grpc```
 
 ## How to use
 
@@ -14,7 +14,7 @@ Example code demonstrating how to use the breakwater-grpc package is provided in
 
 ```
 import (
-	"github.com/Jiali-Xing/breakwater-grpc"
+	"github.com/lohpaul9/breakwater-grpc"
 	"google.golang.org/grpc"
 )
 ...
