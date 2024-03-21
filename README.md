@@ -14,7 +14,7 @@ Example code demonstrating how to use the breakwater-grpc package is provided in
 
 ```
 import (
-	"github.com/Jiali-Xing/breakwater-grpc"
+	"github.com/lohpaul9/breakwater-grpc"
 	"google.golang.org/grpc"
 )
 ...
